@@ -1,12 +1,18 @@
-
 import re
 import numpy
 import json
 import time
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+import pandas as pd
 
 main_folder = "/Users/ofek/PCA_CF/compareToDva/"
 model_file_path = main_folder + "modelFile_main_201811060700.json"
 model_low_file_path = main_folder + "modelFile_main_201811060700_low.json"
+# choose the number of values per ad in the new model
+K = 668
+
 tmp_pca_matrix_file_path = main_folder + "tmp_pca_matrix.tmp"
 tmp_low_matrix_file_path = main_folder + "tmp_low_matrix.tmp"
 
@@ -43,7 +49,7 @@ def getUserFeaturesVector(label_vectors, row_idx, user_features):
         feature = user_features[feature_name]
         # if the feature contains any label with "NEUTRAL" skip it, it will be added later
         if len([p for p in feature.keys() if "NEUTRAL" in p]) > 0:
-            continue;
+            continue
         for label in feature:
             label_vectors[row_idx] = numpy.array(feature[label]);
             row_idx += 1
@@ -167,9 +173,9 @@ UX, SX, _ = numpy.linalg.svd(Sigma)  # [U S V] = svd(Sigma);
 
 assert UX.shape[0] == UX.shape[1] and UX.shape[0] == 968
 
+
+
 # use PCA UX matrix to reduce the dimension of the ad vectors
-# choose the number of values per ad in the new model
-K = 668
 # calculate preserved variance percentage for declaration in the model file
 preserved_variance_pct = (numpy.sum(SX[0:K]) * 100.0) / numpy.sum(SX)
 # reduce the dimension of the ad vectors
@@ -212,7 +218,7 @@ with open(model_file_path, 'r') as model_file, open(model_low_file_path, 'a') as
         count = 0
         for pca_matrix_row in tmp_pca_matrix_file:
             count += 1
-            model_low_file.write("[" + pca_matrix_row.strip().replace("E-0", "E-").replace("E+0", "E+") + "]" + ("\n" if count < 968 else ",\n"))
+            model_low_file.write("[" + pca_matrix_row.strip().replace("E-0", "E-").replace("E+0", "E+") + "]" + (",\n" if count < 968 else "\n"))
     # delete the tmp file
     open(tmp_pca_matrix_file_path, 'w').close()
     model_low_file.write("]\n")
@@ -242,7 +248,7 @@ with open(model_file_path, 'r') as model_file, open(model_low_file_path, 'a') as
             if m:
                 X_low_row = tmp_low_matrix_file.readline()
                 X_low_row = X_low_row.replace('\n', '').replace(' ', '').replace("E-0", "E-").replace("E+0", "E+")
-                new_ad_vector_line = m.group(1) + X_low_row + m.group(2)
+                new_ad_vector_line = m.group(1) + X_low_row + m.group(2) + "\n"
                 # TODO: sanity, make sure the line is correct using the `ad_vec_pattern` regex
                 ms = ad_vec_pattern.match(new_ad_vector_line)
                 if ms:

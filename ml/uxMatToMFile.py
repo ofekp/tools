@@ -1,9 +1,12 @@
-import os
 import json
 import numpy
 import re
+import sys
 
-model_file_path = "/Users/ofek/PCA_CF/compareToDva/modelFile_main_201811060700_low.json"
+if len(sys.argv) == 1:
+    model_file_path = "/Users/ofek/PCA_CF/compareToDva/modelFile_main_201811060700_low.json"
+else:
+    model_file_path = sys.argv[1]
 
 def extract_ux_matrix(model_file_path):
     with open(model_file_path, 'r') as model_file:
@@ -15,15 +18,15 @@ def extract_ux_matrix(model_file_path):
                 #line_list.append("{")
             elif "\"user\":" in line:
                 line_list.pop()  # an unneeded line was already inserted so we're removing it here
-                del line_list[len(line_list) - 2]  # remove a ','
+                #del line_list[len(line_list) - 2]  # remove a ','
                 #line_list.append("}")
                 ret = ''.join(line_list)
                 return ''.join(ret)
             else:
                 if ok_to_write:
                     line_list.append(line)
-                    if '[' in line and ']' in line:
-                        line_list.append(',')
+                    # if '[' in line and ']' in line:
+                    #     line_list.append(',')
     return None
 
 
@@ -42,5 +45,6 @@ def save_matrix_as_m_file(matrix, model_file_path):
             ux_matrix_m_file.write(vector + "\n")
 
 json_string = extract_ux_matrix(model_file_path)
+json_string = json_string.replace("\n", "")
 user_features = json.loads(json_string)
 save_matrix_as_m_file(user_features, model_file_path)
