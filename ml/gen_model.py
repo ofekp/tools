@@ -1,13 +1,20 @@
-
 import re
 import numpy
 import json
 import time
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+import pandas as pd
 
-model_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/lfmModel12_201809010945.json"
-model_low_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/lfmModel12_201809010945_low.json"
-tmp_pca_matrix_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/tmp_pca_matrix.tmp"
-tmp_low_matrix_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/tmp_low_matrix.tmp"
+main_folder = "/Users/ofek/PCA_CF/compareToDva/"
+model_file_path = main_folder + "modelFile_main_201811060700.json"
+model_low_file_path = main_folder + "modelFile_main_201811060700_low.json"
+# choose the number of values per ad in the new model
+K = 668
+
+tmp_pca_matrix_file_path = main_folder + "tmp_pca_matrix.tmp"
+tmp_low_matrix_file_path = main_folder + "tmp_low_matrix.tmp"
 
 ad_vec_pattern = re.compile(r".*\"creative_id\.([0-9]*)\":\[(.*)\].*")  # for ad vectors count
 ad_vec_sub_pattern = re.compile(r"(.*\"creative_id\.[0-9]*\":\[).*(\].*)")  # for vector substitution
@@ -42,7 +49,7 @@ def getUserFeaturesVector(label_vectors, row_idx, user_features):
         feature = user_features[feature_name]
         # if the feature contains any label with "NEUTRAL" skip it, it will be added later
         if len([p for p in feature.keys() if "NEUTRAL" in p]) > 0:
-            continue;
+            continue
         for label in feature:
             label_vectors[row_idx] = numpy.array(feature[label]);
             row_idx += 1
@@ -140,9 +147,15 @@ assert numpy.sum(X[:,969]) == X.shape[0]  # all values in col are 1
 label_vectors_matrix = generate_label_vectors_matrix(model_file_path)
 
 # the last col is the label vector bias and is equal in all label vectors
+# argmax - returns the index of the maximum value along the axis
+# the bias is taken from one of the "day" user feature vector (any of them)
 user_vector_bias = label_vectors_matrix[(label_vectors_matrix[:, 969] != 1.0).argmax(axis=0), 969]
 
-assert numpy.sum(label_vectors_matrix[:,969] != 1.0) == 8  # all values in col are user_vector_bias
+# all values in col are user_vector_bias
+# 8 amounts to the number of "day" feature labels - (1-7) + 1 UNKNOWN label. located here label_vectors_matrix[15460:15470,:]
+# Hifa choose to add the bias in the "day" feature. Since it is only in one feature, any user vector that is generated will have
+# the bias in the last value of the vector.
+assert numpy.sum(label_vectors_matrix[:,969] != 1.0) == 8
 
 # calculate PCA
 # 1) append the matrices
@@ -160,9 +173,9 @@ UX, SX, _ = numpy.linalg.svd(Sigma)  # [U S V] = svd(Sigma);
 
 assert UX.shape[0] == UX.shape[1] and UX.shape[0] == 968
 
+
+
 # use PCA UX matrix to reduce the dimension of the ad vectors
-# choose the number of values per ad in the new model
-K = 668
 # calculate preserved variance percentage for declaration in the model file
 preserved_variance_pct = (numpy.sum(SX[0:K]) * 100.0) / numpy.sum(SX)
 # reduce the dimension of the ad vectors
@@ -176,7 +189,7 @@ X_low = numpy.concatenate((X_low, numpy.ones((X_low.shape[0], 1))), axis=1)
 
 assert X_low.shape[1] == (K + 1)
 assert X_low.shape[0] == X.shape[0]
-
+assert X_low.shape[0] == num_of_ads
 
 # **********************************
 # write the new model to a json file
@@ -186,7 +199,7 @@ assert X_low.shape[0] == X.shape[0]
 open(model_low_file_path, 'w').close()  # delete output file content
 open(tmp_pca_matrix_file_path, 'w').close()  # delete the content of the tmp pca matrix file
 open(tmp_low_matrix_file_path, 'w').close()  # delete the content of the tmp X_low matrix file
-with open(model_file_path, 'r') as model_file, open(model_low_file_path, 'w') as model_low_file:
+with open(model_file_path, 'r') as model_file, open(model_low_file_path, 'a') as model_low_file:
     # pca data is inserted before the feature vectors section starts
     while True:
         line = model_file.readline()
@@ -202,8 +215,10 @@ with open(model_file_path, 'r') as model_file, open(model_low_file_path, 'w') as
         numpy.savetxt(tmp_pca_matrix_file, UX, delimiter=",", fmt="%1.6E")
     model_low_file.write("[\n")
     with open(tmp_pca_matrix_file_path, 'r') as tmp_pca_matrix_file:
+        count = 0
         for pca_matrix_row in tmp_pca_matrix_file:
-            model_low_file.write("[" + pca_matrix_row.strip().replace("E-0", "E-").replace("E+0", "E+") + "]\n")
+            count += 1
+            model_low_file.write("[" + pca_matrix_row.strip().replace("E-0", "E-").replace("E+0", "E+") + "]" + (",\n" if count < 968 else "\n"))
     # delete the tmp file
     open(tmp_pca_matrix_file_path, 'w').close()
     model_low_file.write("]\n")
@@ -233,9 +248,14 @@ with open(model_file_path, 'r') as model_file, open(model_low_file_path, 'w') as
             if m:
                 X_low_row = tmp_low_matrix_file.readline()
                 X_low_row = X_low_row.replace('\n', '').replace(' ', '').replace("E-0", "E-").replace("E+0", "E+")
-                new_ad_vector_line = m.group(1) + X_low_row + m.group(2)
-                model_low_file.write(new_ad_vector_line)
-                ad_idx += 1
+                new_ad_vector_line = m.group(1) + X_low_row + m.group(2) + "\n"
+                # TODO: sanity, make sure the line is correct using the `ad_vec_pattern` regex
+                ms = ad_vec_pattern.match(new_ad_vector_line)
+                if ms:
+                    ad_idx += 1
+                    model_low_file.write(new_ad_vector_line)
+                else:
+                    print "ERROR with line [" + new_ad_vector_line + "]"
             else:
                 model_low_file.write(line)
 
@@ -243,3 +263,4 @@ with open(model_file_path, 'r') as model_file, open(model_low_file_path, 'w') as
     open(tmp_low_matrix_file_path, 'w').close()
 
 print "Done in [" + str(int(time.time()) - start_time_sec) + "] sec"
+print "Number of written ads/number of ads in original model [" + str(ad_idx) + "/" + str(num_of_ads) + "]"

@@ -5,12 +5,12 @@ import re
 import random
 
 
-model_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/lfmModel12_201809010945.json"
-# the user_features.json file was jenerated using the following command:
+model_file_path = "/Users/ofek/PCA_CF/compareToDva/modelFile_main_201811060700_dva.json"
+# the user_features.json file was generated using the following command:
 # cat lfmModel12_201809010945.json.gz | gzip -cd | grep "\"creative_id\.[0-9]*\":\[" | sed -E -e "s/.*\"creative_id\.([0-9]*)\":\[(.*)\].*/\1 \2/g" | tr ',' ' ' > lfmModel12_201809010945.m
 user_features_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/lfmModel12_201809010945_user_features.json"
-user_features_with_neutral_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/lfmModel12_201809010945_user_features_with_neutral.m"
-user_features_neutral_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/lfmModel12_201809010945_user_features_neutral.json"
+#user_features_with_neutral_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/lfmModel12_201809010945_user_features_with_neutral.m"
+#user_features_neutral_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/lfmModel12_201809010945_user_features_neutral.json"
 user_vectors_file_path = "/Users/ofek/PCA_CF/machine-learning-ex8/ex8/work/lfmModel12_201809010945_user_vectors_4_210.m"
 
 # section, recency, user_age, user_gender, state_woeid, device_type_id, delivered_match_type, relevanceScore, advertiser_acct_id, sonFrequencyCapAdvertiserDaily, source, external.userCategory, yic_mv
